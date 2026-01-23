@@ -11,7 +11,7 @@ To use this, include board.h in a project you want and create a Board object
 
 Each time you want to generate the legal moves(including when you first create the board), run the board.generateLegal function.
 
-After running that function, you can see the legal moves by iterating through indexes 0 to board.legalMoveCount. For each index the legal move is board.legalMoves[index]
+After running that function, you can see the legal moves by iterating through indexes 0 to board.legalMoveCount-1. For each index the legal move is board.legalMoves[index]
 
 The reason we have to do this is because legalMoves is an array with a fixed size.
 
