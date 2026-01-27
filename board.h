@@ -27,7 +27,6 @@ public:
     std::array<uint16_t, 5900> stateHistory;
     std::array<uint64_t, 5900> hashHistory;
 
-    std::array<uint64_t, 16384> repetitionTable = {};
     Zobrist zobrist;
 
     std::array<uint64_t, 64> pinMasks;

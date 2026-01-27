@@ -140,7 +140,6 @@ void Board::importFEN(string fen){
     //reset board state
     bitboards.fill(0ULL);
     moves = {}; legalMoves = {}; stateHistory = {}; hashHistory = {};
-    repetitionTable = {};
     zobrist = Zobrist();
     totalMoves = 0; castlingRights = {false, false, false, false}; halfMoveClock = 0; enPassantSquare = 0;
     turn = WHITE; gameOver = false; outcome = 0; legalMoveCount = 0;
@@ -550,7 +549,6 @@ void Board::makeMove(uint32_t move, bool outcomeCheck){
     turn = 1-turn;
     zobrist.hash ^= zobrist.boardStateTable[0];
 
-    repetitionTable[zobrist.hash&0b11111111111111]++;
     moves[totalMoves] = move;
     totalMoves++;
 
@@ -561,7 +559,6 @@ void Board::makeMove(uint32_t move, bool outcomeCheck){
 
 void Board::unmakeMove(){
     turn = 1-turn;
-    repetitionTable[zobrist.hash & 0b11111111111111]--;
     totalMoves--;
 
     unpackState(stateHistory[totalMoves]);
@@ -650,12 +647,23 @@ void Board::isGameOver(){
         }
     }
 
+    int count = 1;
+    bool repetition = false;
+    for(int ind = totalMoves-2; ind >= 0; ind-=2){
+        if(hashHistory[ind] == zobrist.hash) count++;
+        
+        if(count >= 3){
+            repetition = true;
+            break;
+        }
+    }
+
     if(inCheck && !legalExists){
         gameOver = true;
         outcome = turn == WHITE ? -1 : 1;
     }
 
-    else if(repetitionTable[zobrist.hash & 0b11111111111111] >= 3 || halfMoveClock >= 50 || (!legalExists && !inCheck)){ //TODO: turn this into 50 full moves instead of half
+    else if(repetition || halfMoveClock >= 50 || (!legalExists && !inCheck)){ //TODO: turn this into 50 full moves instead of half
         gameOver = true;
         outcome = 0;
     }
