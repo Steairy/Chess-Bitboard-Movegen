@@ -57,3 +57,4 @@ To import a FEN, use the importFEN function and pass the fen string. The fen nee
 
 To only generate captures, do board.generateLegal(true)
 
+To quickly find the UCI equivalent of a move, use board.moveToUCI(uint32_t move). To find the encoded version of a UCI move, use board.moveFromUCI(std::string move)
