@@ -799,6 +799,37 @@ void Board::generateLegal(bool capturesOnly){
     legalMoveCount = legalCurrent;
 }
 
+std::string Board::moveToUCI(uint32_t move){
+    std::string out = square_to_name(move & 0x3F) + square_to_name((move >> 6) & 0x3F);
+    if((move >> 24)&0x1){ // is promotion
+        std::array<char, 4> promotionSymbols = {'n', 'b', 'r', 'q'};
+        int promotedPiece = (move >> 25)&0xF;
+        out += promotionSymbols[(promotedPiece%6)-1];
+    }
+    return out;
+}
+
+uint32_t Board::moveFromUCI(std::string move){
+    int fromSq = (move[1]-'1')*8 + (move[0]-'a');
+    int toSq   = (move[3]-'1')*8 + (move[2]-'a');
+    generateLegal();
+    for(int i = 0; i < legalMoveCount; i++){
+        if(((legalMoves[i] & 0x3F) == fromSq) && (((legalMoves[i] >> 6) & 0x3F) == toSq)){
+            if(move.length() == 5){
+                std::array<char, 4> promotionSymbols = {'n', 'b', 'r', 'q'};
+                int promotedPiece = (legalMoves[i] >> 25)&0xF;
+                if(promotionSymbols[(promotedPiece%6)-1] == move[4]){
+                    return legalMoves[i];
+                }
+            }
+            else{
+                return legalMoves[i];
+            }
+        }
+    }
+    return 0;
+}
+
 long long perft(Board& board, int depth){
     long long visited = 0;
     if(depth == 0){

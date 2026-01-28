@@ -82,6 +82,9 @@ public:
     void unmakeMove();
 
     void isGameOver();
+
+    std::string moveToUCI(uint32_t move);
+    uint32_t moveFromUCI(std::string move);
 };
 
 long long perft(Board& board, int depth);
