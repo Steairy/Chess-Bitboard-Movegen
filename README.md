@@ -53,5 +53,7 @@ In this board implementation, white is 0 and black is 1. So when checking board.
 
 To access the current zobrist hash, you can do board.zobrist.hash
 
+To import a FEN, use the importFEN function and pass the fen string. The fen needs to have all 6 fields.
 
+To only generate captures, do board.generateLegal(true)
 
