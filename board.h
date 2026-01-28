@@ -66,8 +66,8 @@ public:
 
     void generatePinMasks();
     bool leavesInCheck(uint32_t move);
-    void generateLegal();
-    void generatePseudoLegal(int piece, int square, std::array<uint32_t, 218>& movesVector, int& currentMove);
+    void generateLegal(bool capturesOnly=false);
+    void generatePseudoLegal(int piece, int square, std::array<uint32_t, 218>& movesVector, int& currentMove, bool capturesOnly=false);
 
     uint64_t generateWhitePawn(int square, std::array<uint32_t, 218>& movesVector, int& currentMove);
     uint64_t generateBlackPawn(int square, std::array<uint32_t, 218>& movesVector, int& currentMove);

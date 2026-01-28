@@ -186,6 +186,9 @@ void Board::importFEN(string fen){
     if(tokens[1] == "b"){
         turn = BLACK;
     }
+    if(tokens[1] == "w"){
+        turn = WHITE;
+    }
     for(char i : tokens[2]){
         if(i == 'K'){
             castlingRights[0] = true;
@@ -386,7 +389,7 @@ uint64_t Board::generateBlackKing(int square, array<uint32_t, 218>& movesVector,
     return kingAttacks[square];
 }
 
-void Board::generatePseudoLegal(int piece, int square, array<uint32_t, 218>& movesVector, int& currentMove){
+void Board::generatePseudoLegal(int piece, int square, array<uint32_t, 218>& movesVector, int& currentMove, bool capturesOnly){
 
     uint64_t friendlyPieces = getFriendlyPieces();
     uint64_t enemyPieces = getEnemyPieces();
@@ -427,6 +430,7 @@ void Board::generatePseudoLegal(int piece, int square, array<uint32_t, 218>& mov
 
 
     movesMask &= ~friendlyPieces;
+    if(capturesOnly) movesMask &= enemyPieces;
     while(movesMask){
         int newSquare = __builtin_ctzll(movesMask);
         bool isCapture = checkBit(enemyPieces, newSquare);
@@ -747,7 +751,7 @@ bool Board::leavesInCheck(uint32_t move){
 }
 
 
-void Board::generateLegal(){
+void Board::generateLegal(bool capturesOnly){
     generatePinMasks();
     static array<uint32_t, 218> pseudoLegal;
 
@@ -759,7 +763,7 @@ void Board::generateLegal(){
         while(bb){
             int square = __builtin_ctzll(bb);
             bb &= bb-1;
-            generatePseudoLegal(piece, square, pseudoLegal, currentMove);
+            generatePseudoLegal(piece, square, pseudoLegal, currentMove, capturesOnly);
         }
     }
 
