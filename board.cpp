@@ -229,6 +229,20 @@ void Board::initZobrist(){
     for(int i = 0; i < 5; i++){
         zobrist.boardStateTable[i] = rng();
     }
+
+    for(int i = 1; i < 5; i++){
+        if(castlingRights[i-1]){
+            zobrist.hash ^= zobrist.boardStateTable[i];
+        }
+    }
+
+    if(turn == BLACK){
+        zobrist.hash ^= zobrist.boardStateTable[0];
+    }
+
+    if (enPassantSquare != 0) {
+        zobrist.hash ^= zobrist.enPassantTable[enPassantSquare];
+    }
 }
 
 uint16_t Board::packState(){
@@ -466,8 +480,14 @@ void Board::makeMove(uint32_t move, bool outcomeCheck){
     bool isPromotion = (move >> 24)&0x1;
     int promotedPiece = (move >> 25)&0xF;
 
+    std::array<bool, 4> oldCastlingRights = castlingRights;
+
     stateHistory[totalMoves] = packState();
     hashHistory[totalMoves] = zobrist.hash;
+    if(enPassantSquare != 0){
+        zobrist.hash ^= zobrist.enPassantTable[enPassantSquare];
+    }
+    
 
     enPassantSquare = 0;
     halfMoveClock++;
@@ -510,37 +530,29 @@ void Board::makeMove(uint32_t move, bool outcomeCheck){
     }
 
     if(movingPiece == 5){
-        zobrist.hash ^= zobrist.boardStateTable[1] & -(uint64_t)castlingRights[0];
-        zobrist.hash ^= zobrist.boardStateTable[2] & -(uint64_t)castlingRights[1];
         castlingRights[0] = false;
         castlingRights[1] = false;
     }
 
     if(movingPiece == 11){
-        zobrist.hash ^= zobrist.boardStateTable[3] & -(uint64_t)castlingRights[2];
-        zobrist.hash ^= zobrist.boardStateTable[4] & -(uint64_t)castlingRights[3];
         castlingRights[2] = false;
         castlingRights[3] = false;
     }
 
 
     if((startSquare == 0) || (endSquare == 0)){
-        zobrist.hash ^= zobrist.boardStateTable[2] & -(uint64_t)castlingRights[1];
         castlingRights[1] = false;
     }
 
     if((startSquare == 7) || (endSquare == 7)){
-        zobrist.hash ^= zobrist.boardStateTable[1] & -(uint64_t)castlingRights[0];
         castlingRights[0] = false;
     }
 
     if((startSquare == 56) || (endSquare == 56)){
-        zobrist.hash ^= zobrist.boardStateTable[4] & -(uint64_t)castlingRights[3];
         castlingRights[3] = false;
     }
 
     if((startSquare == 63) || (endSquare == 63)){
-        zobrist.hash ^= zobrist.boardStateTable[3] & -(uint64_t)castlingRights[2];
         castlingRights[2] = false;
     }
 
@@ -548,6 +560,14 @@ void Board::makeMove(uint32_t move, bool outcomeCheck){
     if(((movingPiece == 0) || (movingPiece == 6)) && (abs(startSquare-endSquare) == 16)){ // double push
         enPassantSquare = (startSquare+endSquare) >> 1; // middle of the 2 squares;
         zobrist.hash ^= zobrist.enPassantTable[enPassantSquare];
+    }
+
+    if(oldCastlingRights != castlingRights){
+        for(int i = 0; i < 4; i++){
+            if(oldCastlingRights[i] != castlingRights[i]){
+                zobrist.hash ^= zobrist.boardStateTable[i+1];
+            }
+        }
     }
 
     turn = 1-turn;
@@ -651,14 +671,14 @@ void Board::isGameOver(){
         }
     }
 
-    int count = 1;
+    int count = 0;
     bool repetition = false;
     for(int ind = totalMoves-2; ind >= 0; ind-=2){
-        if(hashHistory[ind] == zobrist.hash) count++;
-        
-        if(count >= 3){
-            repetition = true;
-            break;
+        if(zobrist.hash == hashHistory[ind]){
+            if(++count >= 2){
+                repetition = true;
+                break;
+            }
         }
     }
 

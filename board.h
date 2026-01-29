@@ -91,4 +91,5 @@ long long perft(Board& board, int depth);
 
 std::string square_to_name(int index);
 
+
 #endif // BOARD_H
