@@ -140,7 +140,6 @@ void Board::importFEN(string fen){
     //reset board state
     bitboards.fill(0ULL);
     moves = {}; legalMoves = {}; stateHistory = {}; hashHistory = {};
-    zobrist = Zobrist();
     totalMoves = 0; castlingRights = {false, false, false, false}; halfMoveClock = 0; enPassantSquare = 0;
     turn = WHITE; gameOver = false; outcome = 0; legalMoveCount = 0;
     //read fen
@@ -207,6 +206,8 @@ void Board::importFEN(string fen){
         enPassantSquare = ((tokens[3][1] - '1') * 8) + (tokens[3][0]-97);
     }
     halfMoveClock = stoi(tokens[4]);
+
+    initZobrist();
 }
 
 bool Board::checkBit(uint64_t bitboard, int bit){
