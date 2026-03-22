@@ -247,17 +247,25 @@ void Board::initZobrist(){
 }
 
 uint16_t Board::packState(){
-    uint16_t newState = (halfMoveClock & 0x3F) | (castlingRights[0] << 6) | (castlingRights[1] << 7) | (castlingRights[2] << 8) | (castlingRights[3] << 9) | ((enPassantSquare & 0x3F) << 10);
+    bool enPassantExists = enPassantSquare != 0;
+    int encodedEnPassant = (enPassantSquare / 8 == 2 ? 0 : 1) | ((enPassantSquare%8) << 1);
+    uint16_t newState = (halfMoveClock & 0x7F) | (castlingRights[0] << 7) | (castlingRights[1] << 8) | (castlingRights[2] << 9) | (castlingRights[3] << 10) | ((enPassantExists & 0x1) << 11) | ((encodedEnPassant & 0xF) << 12);
     return newState;
 }
 
 void Board::unpackState(uint16_t packedState){
-    halfMoveClock = packedState&0x3F;
-    castlingRights[0] = (packedState >> 6)&0x1;
-    castlingRights[1] = (packedState >> 7)&0x1;
-    castlingRights[2] = (packedState >> 8)&0x1;
-    castlingRights[3] = (packedState >> 9)&0x1;
-    enPassantSquare = (packedState >> 10)&0x3F;
+    halfMoveClock = packedState&0x7F;
+    castlingRights[0] = (packedState >> 7)&0x1;
+    castlingRights[1] = (packedState >> 8)&0x1;
+    castlingRights[2] = (packedState >> 9)&0x1;
+    castlingRights[3] = (packedState >> 10)&0x1;
+    bool enPassantExists = (packedState >> 11)&0x1;
+    if(enPassantExists){
+        enPassantSquare = ((packedState >> 12)&0x1 ? 40 : 16) + ((packedState >> 13)&0x7);
+    }
+    else{
+        enPassantSquare = 0;
+    }
 }
 
 uint32_t Board::encodeMove(int startSquare, int endSquare, int movingPiece, bool isCapture, int capturedPiece, bool isEnPassant, bool isCastling, bool castleSide, bool isPromotion, int promotedPiece){
@@ -672,6 +680,7 @@ void Board::isGameOver(){
         }
     }
 
+    // Repetition check
     int count = 0;
     bool repetition = false;
     for(int ind = totalMoves-2; ind >= 0; ind-=2){
@@ -683,12 +692,19 @@ void Board::isGameOver(){
         }
     }
 
+    // Insufficient material check
+    bool insufficient = true;
+    int minorCount = __builtin_popcountll(bitboards[1] | bitboards[2] | bitboards[7] | bitboards[8]);
+    if((minorCount > 1) || (bitboards[0] | bitboards[6] | bitboards[3] | bitboards[9] | bitboards[4] | bitboards[10])){
+        insufficient = false;
+    }
+
     if(inCheck && !legalExists){
         gameOver = true;
         outcome = turn == WHITE ? -1 : 1;
     }
 
-    else if(repetition || halfMoveClock >= 50 || (!legalExists && !inCheck)){ //TODO: turn this into 50 full moves instead of half
+    else if(repetition || halfMoveClock >= 100 || (!legalExists && !inCheck) || insufficient){
         gameOver = true;
         outcome = 0;
     }
