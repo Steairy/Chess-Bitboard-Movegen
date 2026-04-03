@@ -207,8 +207,6 @@ void Board::importFEN(string fen){
     }
     halfMoveClock = stoi(tokens[4]);
 
-    inCheck = squareAttacked(__builtin_ctzll(bitboards[5+(6*turn)]), !turn);
-
     initZobrist();
 }
 
@@ -503,7 +501,6 @@ void Board::makeMove(uint32_t move, bool outcomeCheck){
     enPassantSquare = 0;
     halfMoveClock++;
     halfMoveClock *= !((movingPiece == 0) || (movingPiece == 6) || isCapture);
-    inCheck = (move>>29)&0x1;
 
     removeBit(movingPiece, startSquare);
     zobrist.hash ^= zobrist.hashTable[startSquare][movingPiece];
@@ -646,8 +643,6 @@ void Board::unmakeMove(){
         removeBit(rookIndex, removeIndexes[stateIndex]);
         bitboards[rookIndex] |= 1ULL << addIndexes[stateIndex];
     }
-
-    inCheck = totalMoves > 0 ? (moves[totalMoves-1]>>29)&0x1 : squareAttacked(__builtin_ctzll(bitboards[5+6*turn]), !turn);
 }
 
 void Board::isGameOver(){
@@ -655,6 +650,8 @@ void Board::isGameOver(){
     bool legalExists = false;
     int currentMove = 0;
     int prev;
+
+    bool inCheck = squareAttacked(__builtin_ctzll(bitboards[5+6*turn]), !turn);
 
     for(int piece = (turn*6); piece < 6+(turn*6); piece++){
         uint64_t bb = bitboards[piece];
@@ -898,6 +895,7 @@ void Board::generateLegal(bool capturesOnly){
     static array<uint32_t, 218> pseudoLegal;
 
     int kingSquare =  __builtin_ctzll(bitboards[5+(6*turn)]);
+    bool inCheck = squareAttacked(__builtin_ctzll(bitboards[5+6*turn]), !turn);
 
     int currentMove = 0;
     for(int piece = 0+(turn*6); piece < 6+(turn*6); piece++){ //generate all pseudo legal moves first
@@ -939,10 +937,6 @@ void Board::generateLegal(bool capturesOnly){
         }
 
         if(!illegal){
-            // Check test
-            if(isMoveCheck(move)){
-                move |= 1ULL << 29;
-            }
             legalMoves[legalCurrent++] = move;
         }
     }

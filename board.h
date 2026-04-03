@@ -39,7 +39,6 @@ public:
     bool turn = false;
 
     bool gameOver = false;
-    bool inCheck = false;
     int outcome = 0;
     int legalMoveCount = 0;
 
