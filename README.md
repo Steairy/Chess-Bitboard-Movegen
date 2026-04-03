@@ -32,7 +32,6 @@ To extract extra info while making a chess engine or making the moves human read
 - Bit 23 (1 bit) = Shows the castle side (0 = kingside, 1 = queenside)
 - Bit 24 (1 bit) = Shows if the move is a promotion
 - Bits 25-28 (4 bits) = Which piece the pawn promoted to
-- Bit 29 (1 bit) = Shows if move is a check
 
 # Outcome Checking
 To check the outcome, we can use the gameOver and outcome variables of the board. If board.gameOver is false, the game hasn't ended yet. When the game ends, you can check board.outcome for the result. -1 = Black wins, 0 = Draw, 1 = White Wins.
@@ -40,11 +39,11 @@ To check the outcome, we can use the gameOver and outcome variables of the board
 # Performance
 Here are the perft times for this bitboard engine, you can replicate the perft times using the built in perft(Board board, int depth) function.
 
-Note: The perft tests were done with g++ and using the flags -O3 -march=native -ffast-math. In the perft tests, zobrist hashing and move check detection was still done but terminal state checking wasn't done. The perft results are the average of 100 runs.
+Note: The perft tests were done with g++ and using the flags -O3 -march=native -ffast-math. In the perft tests, zobrist hashing was still done but terminal state checking wasn't done. The perft results are the average of 100 runs.
 
-- Perft 4: 4.8 ms
-- Perft 5: 117.2 ms
-- Perft 6: 2840 ms
+- Perft 4: 3.7 ms
+- Perft 5: 84.6 ms
+- Perft 6: 2200 ms
 
 # Extra Notes
 In this board implementation, white is 0 and black is 1. So when checking board.turn, keep this in mind. You can also use board.WHITE or board.BLACK to remove any confusion.
@@ -57,4 +56,4 @@ To only generate captures, do board.generateLegal(true)
 
 To quickly find the UCI equivalent of a move, use board.moveToUCI(uint32_t move). To find the encoded version of a UCI move, use board.moveFromUCI(std::string move)
 
-To see if currently in check, you can look at the board.inCheck variable
+To see if a move is check, you can use the isMoveCheck(uint32_t move) function
