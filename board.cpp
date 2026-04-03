@@ -603,7 +603,6 @@ void Board::unmakeMove(){
     gameOver = false;
     outcome = 0;
 
-    
 
     uint32_t move = moves[totalMoves];
     moves[totalMoves+1] = 0;
@@ -650,8 +649,7 @@ void Board::isGameOver(){
     bool legalExists = false;
     int currentMove = 0;
     int prev;
-
-    bool inCheck = squareAttacked(__builtin_ctzll(bitboards[5+6*turn]), !turn);
+    bool inCheck = squareAttacked(__builtin_ctzll(bitboards[5+(6*turn)]), 1-turn);
 
     for(int piece = (turn*6); piece < 6+(turn*6); piece++){
         uint64_t bb = bitboards[piece];
@@ -668,7 +666,7 @@ void Board::isGameOver(){
 
                 if(isCastling) continue;
 
-                if(!leavesInAttack(move, __builtin_ctzll(bitboards[5+(6*turn)]), !turn)){
+                if(!leavesInCheck(move)){
                     legalExists = true;
                     break;
                 }
@@ -738,8 +736,9 @@ void Board::generatePinMasks(){
             if(pinMask && (__builtin_popcountll(squares) == 1)){ //if the attacker can actually reach the king and there is only 1 piece between king and attacker
                 squares &= friendlyPieces;
                 pinMask |= 1ULL << sq;
-                if(squares){
+                while(squares){
                     pinMasks[__builtin_ctzll(squares)] = pinMask;
+                    squares &= squares-1;
                 }
             }
             slidingBitboard &= slidingBitboard-1;
@@ -778,7 +777,6 @@ void Board::generateDiscoveredCheckMasks(){
             slidingBitboard &= slidingBitboard-1;
         }
     }
-
 }
 
 bool Board::isMoveCheck(uint32_t move){
@@ -794,7 +792,9 @@ bool Board::isMoveCheck(uint32_t move){
     bool isEnPassant = (move >> 21) & 0x1;
     bool isPromotion = (move >> 24) & 0x1;
     if(isCastling || isEnPassant || isPromotion){
-        check = leavesInAttack(move, __builtin_ctzll(enemyKing), turn);
+        makeMove(move, false);
+        check = squareAttacked(__builtin_ctzll(enemyKing), !turn);
+        unmakeMove();
     }
     
     else{
@@ -827,22 +827,14 @@ bool Board::isMoveCheck(uint32_t move){
     return check;
 }
 
-bool Board::leavesInAttack(uint32_t move, int square, bool side){
+bool Board::leavesInCheck(uint32_t move){
     array<uint64_t, 12> tempBoards = bitboards;
     int startSquare = move&0x3F; int endSquare = (move >> 6)&0x3F; int movingPiece = (move >> 12)&0xF;
     bool isCapture = (move >> 16)&0x1; int capturedPiece = (move >> 17)&0xF; bool isEnPassant = (move >> 21)&0x1;
-    bool isCastling = (move >> 22) & 0x1;
-    bool isPromotion = (move >> 24)&0x1;
-    int promotedPiece = (move >> 25)&0xF;
     
     //making the move as minimally as possible
     tempBoards[movingPiece] &= ~(1ULL << startSquare);
     tempBoards[movingPiece] |= (1ULL << endSquare);
-
-    if(isPromotion){
-        tempBoards[movingPiece] &= ~(1ULL << endSquare);
-        tempBoards[promotedPiece] |= (1ULL << endSquare);
-    }
 
     if(isEnPassant){
         int captureLocation = turn == WHITE ? endSquare-8 : endSquare+8;
@@ -852,20 +844,8 @@ bool Board::leavesInAttack(uint32_t move, int square, bool side){
     if(isCapture && !isEnPassant){
         tempBoards[capturedPiece] &= ~(1ULL << endSquare);
     }
-
-    if(isCastling){
-        bool castlingSide = (move >> 23)&0x1;
-        int rookIndex = movingPiece - 2;
-        static array<int,4> removeIndexes = {7, 0, 63, 56};
-        static array<int,4> addIndexes = {5, 3, 61, 59};
-
-        int stateIndex = (turn << 1) + castlingSide;
-
-        tempBoards[rookIndex] &= ~(1ULL << removeIndexes[stateIndex]);
-        tempBoards[rookIndex] |= 1ULL << addIndexes[stateIndex];
-    }
-
     //checking if move left in check(same thing as squareAttacked but for tempBoards)
+    int square = __builtin_ctzll(tempBoards[5+(6*turn)]);
     bool flag = false;
     uint64_t allPieces = tempBoards[0] | tempBoards[1] | tempBoards[2] | tempBoards[3] | tempBoards[4] | tempBoards[5] | tempBoards[6] | tempBoards[7] | tempBoards[8] | tempBoards[9] | tempBoards[10] | tempBoards[11];
 
@@ -878,8 +858,8 @@ bool Board::leavesInAttack(uint32_t move, int square, bool side){
 
     static const array<array<uint64_t, 64>*, 2> pawnAttackTables = {&blackPawnAttacks, &whitePawnAttacks};
 
-    int add = 6*side;
-    flag |= ((*pawnAttackTables[side])[square] & tempBoards[add]) != 0;
+    int add = 6*!turn;
+    flag |= ((*pawnAttackTables[!turn])[square] & tempBoards[add]) != 0;
     flag |= (knightAttacks[square] & tempBoards[1+add]) != 0;
     flag |= (bishopAttacksCurrent & tempBoards[2+add]) != 0;
     flag |= (rookAttacksCurrent & tempBoards[3+add]) != 0;
@@ -891,11 +871,9 @@ bool Board::leavesInAttack(uint32_t move, int square, bool side){
 
 void Board::generateLegal(bool capturesOnly){
     generatePinMasks();
-    generateDiscoveredCheckMasks();
     static array<uint32_t, 218> pseudoLegal;
 
-    int kingSquare =  __builtin_ctzll(bitboards[5+(6*turn)]);
-    bool inCheck = squareAttacked(__builtin_ctzll(bitboards[5+6*turn]), !turn);
+    bool inCheck = squareAttacked(__builtin_ctzll(bitboards[5+(6*turn)]), 1-turn);
 
     int currentMove = 0;
     for(int piece = 0+(turn*6); piece < 6+(turn*6); piece++){ //generate all pseudo legal moves first
@@ -914,7 +892,7 @@ void Board::generateLegal(bool capturesOnly){
         if(isCastling){
             int startSquare = move&0x3F;
             bool castlingSide = (move >> 23)&0x1;
-            if(inCheck || squareAttacked(startSquare + (castlingSide ? -1 : 1), 1-turn)){
+            if(squareAttacked(__builtin_ctzll(bitboards[5+(6*turn)]), !turn) || squareAttacked(startSquare + (castlingSide ? -1 : 1), 1-turn)){
                 continue;
             }
         }
@@ -922,14 +900,9 @@ void Board::generateLegal(bool capturesOnly){
 
         int startSquare = move&0x3F; int endSquare = (move >> 6)&0x3F; int movingPiece = (move >> 12)&0xF; bool isEnPassant = (move >> 21)&0x1;
 
-        int newKingSquare = kingSquare;
-        if(movingPiece == 5+6*turn){
-            newKingSquare = endSquare;
-        }
-        
         bool illegal;
         if(inCheck || (movingPiece == 5+(6*turn)) || isEnPassant){ // needs full check
-            illegal = leavesInAttack(move, newKingSquare, !turn);
+            illegal = leavesInCheck(move);
         }
         else{ //only need to test if pinned
             uint64_t pinMask = pinMasks[startSquare];
@@ -942,6 +915,8 @@ void Board::generateLegal(bool capturesOnly){
     }
 
     legalMoveCount = legalCurrent;
+
+    generateDiscoveredCheckMasks();
 }
 
 std::string Board::moveToUCI(uint32_t move){

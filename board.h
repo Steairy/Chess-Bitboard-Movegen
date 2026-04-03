@@ -67,9 +67,8 @@ public:
 
     void generatePinMasks();
     void generateDiscoveredCheckMasks();
-    bool leavesInAttack(uint32_t move, int square, bool side);
     bool isMoveCheck(uint32_t move);
-    
+    bool leavesInCheck(uint32_t move);
     void generateLegal(bool capturesOnly=false);
     void generatePseudoLegal(int piece, int square, std::array<uint32_t, 218>& movesVector, int& currentMove, bool capturesOnly=false);
 
