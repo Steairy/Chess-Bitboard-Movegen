@@ -56,4 +56,4 @@ To only generate captures, do board.generateLegal(true)
 
 To quickly find the UCI equivalent of a move, use board.moveToUCI(uint32_t move). To find the encoded version of a UCI move, use board.moveFromUCI(std::string move)
 
-To see if a move is check, you can use the isMoveCheck(uint32_t move) function
+To see if a move is check, you can use the board.generateDiscoveredCheckMasks() function after generateLegal and then isMoveCheck(uint32_t move) function for the move
